@@ -263,6 +263,11 @@ void LED::draw(bool highlighted) {
     _y += _gap;
 }
 
+void LED::draw(bool highlighted, int color) {
+    drawOutlinedCircle(_x, _y, _radius, (highlighted) ? color : DARKGREY, WHITE);
+    _y += _gap;
+}
+
 void drawMenuTitle(const char* name) {
     centered_text(name, 12);
 }

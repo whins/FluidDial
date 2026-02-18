@@ -28,6 +28,7 @@ public:
 };
 
 constexpr int LIGHTYELLOW = 0xFFF0;
+
 class IB : public ImageButton {
 public:
     IB(const char* text, callback_t callback, const char* filename) : ImageButton(text, callback, filename, buttonRadius, WHITE) {}
@@ -35,11 +36,13 @@ public:
 };
 
 extern Scene homingScene;
-//extern Scene joggingScene;
-//extern Scene joggingScene2;
 extern Scene multiJogScene;
+#ifdef LASER_ONLY
+extern Scene laserTestScene;
+#else
 extern Scene probingScene;
 extern Scene toolchangeScene;
+#endif
 extern Scene statusScene;
 extern Scene macroMenu;
 
@@ -57,8 +60,12 @@ extern Scene aboutScene;
 IB statusButton("Status", &statusScene, "statustp.png");
 IB homingButton("Homing", &homingScene, "hometp.png");
 IB jogButton("Jog", &jogScene, "jogtp.png");
+#ifdef LASER_ONLY
+IB laserButton("Laser", &laserTestScene, "laser.png");
+#else
 IB probeButton("Probe", &probingScene, "probetp.png");
 IB toolchangeButton("Tools", &toolchangeScene, "toolchangetp.png");
+#endif
 
 #ifdef USE_WMB_FSS
 IB filesButton("Files", &wmbFileSelectScene, "filestp.png");
@@ -76,8 +83,12 @@ public:
         statusButton.disable();
         homingButton.disable();
         jogButton.disable();
+#ifdef LASER_ONLY
+        laserButton.disable();
+#else
         probeButton.disable();
         toolchangeButton.disable();
+#endif
         filesButton.disable();
         controlButton.disable();
         setupButton.enable();
@@ -86,8 +97,12 @@ public:
         statusButton.enable();
         homingButton.enable();
         jogButton.enable();
+#ifdef LASER_ONLY
+        laserButton.enable();
+#else
         probeButton.enable();
         toolchangeButton.enable();
+#endif
         filesButton.enable();
         controlButton.enable();
         setupButton.enable();
@@ -126,8 +141,12 @@ Scene* initMenus() {
     menuScene.addItem(&statusButton);
     menuScene.addItem(&homingButton);
     menuScene.addItem(&jogButton);
+#ifdef LASER_ONLY
+    menuScene.addItem(&laserButton);
+#else
     menuScene.addItem(&probeButton);
     menuScene.addItem(&toolchangeButton);
+#endif
     menuScene.addItem(&filesButton);
     menuScene.addItem(&controlButton);
     menuScene.addItem(&setupButton);

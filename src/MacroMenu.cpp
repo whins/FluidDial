@@ -28,11 +28,11 @@ void MacroItem::show(const Point& where) {
     }
 
     if (_highlighted) {
-        drawRect(where, Point { 200, 50 }, 15, color);
-        text(name(), where + Point { 0, 6 }, BLACK, MEDIUM, middle_center);
+        drawRect(where, Point { 200, 50 }, 9, ORANGE);
+        text(name(), where + Point { 0, 6 }, BLACK, SMALL, middle_center);
         text(extra, where - Point { 0, 16 }, BLACK, TINY, middle_center);
     } else {
-        text(name(), where, WHITE, SMALL, middle_center);
+        text(name(), where, WHITE, TINY, middle_center);
     }
 }
 

@@ -43,6 +43,7 @@ private:
 public:
     LED(int x, int y, int radius, int gap) : _x(x), _y(y), _radius(radius), _gap(gap) {}
     void draw(bool highlighted);
+    void draw(bool highlighted, int color);
 };
 
 class DRO : public Stripe {

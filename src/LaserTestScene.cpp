@@ -3,9 +3,10 @@
 
 #include <string>
 #include "Scene.h"
+#include "ConfirmScene.h"
 #include "e4math.h"
 
-class LaserScene : public Scene {
+class LaserTestScene : public Scene {
 private:
     int  selection   = 0;
     long oldPosition = 0;
@@ -15,21 +16,19 @@ private:
     uint16_t power_max     = 1000;
     uint32_t test_duration = 50;
     uint8_t  power_percent = 20;
+    uint16_t feedrate      = 500;
+
+    bool testStarted = false;
 
 public:
-    LaserScene() : Scene("Laser") {}
+    LaserTestScene() : Scene("Laser") {}
 
     void onDialButtonPress() { pop_scene(); }
 
     void onGreenButtonPress() {
-        // G38.2 G91 F80 Z-20 P8.00
         switch (state) {
             case Idle:
-                // TODO :: Make a GCode command for laser testing and use it here.  Maybe something like:
-                // G38.2 G91 F1000 S20 P50 for a 20% power test for 50ms.  We can use the existing feedrate and dwell parameters for the laser test.
-
-                // send_linef("G38.2G91F%d%c%dP%s", test_duration, axisNumToChar(_axis), power_max, e4_to_cstr(_offset, 2));
-                send_linef("M5S0");
+                confirm_cutting_test();
                 break;
             case Cycle:
                 fnc_realtime(FeedHold);
@@ -52,7 +51,18 @@ public:
                 fnc_realtime(Reset);
                 break;
             case Idle:
-                send_linef("M5S0");
+                ackBeep();
+                testStarted = true;
+                reDisplay();
+
+                send_line("G1 F1");
+                send_linef("M3 S%d", power_max / 100 * power_percent);
+                send_linef("G4 P%d.%03d", test_duration / 1000, test_duration % 1000);
+                send_line("M5 S0");
+
+                testStarted = false;
+                reDisplay();
+                // ackBeep();
                 break;
             case Hold:
             case DoorClosed:
@@ -63,9 +73,9 @@ public:
 
     void onTouchClick() {
         // Rotate through the items to be adjusted.
-        rotateNumberLoop(selection, 1, 0, 2);
+        rotateNumberLoop(selection, 1, 0, 3);
         reDisplay();
-        // ackBeep();
+        ackBeep();
     }
 
     void onDROChange() { reDisplay(); }
@@ -85,19 +95,27 @@ public:
                 }
                 break;
             case 1:
-                test_duration += delta * 50;
+                power_percent += delta;
+                if (power_percent > 100) {
+                    power_percent = 100;
+                } else if (power_percent < 0) {
+                    power_percent = 0;
+                }
+                break;
+            case 2:
+                test_duration += delta * 20;
                 if (test_duration > 2000) {
                     test_duration = 2000;
                 } else if (test_duration < 50) {
                     test_duration = 50;
                 }
                 break;
-            case 2:
-                power_percent += delta * 2;
-                if (power_percent > 100) {
-                    power_percent = 100;
-                } else if (power_percent < 0) {
-                    power_percent = 0;
+            case 3:
+                feedrate += delta * 20;
+                if (feedrate > 2000) {
+                    feedrate = 2000;
+                } else if (feedrate < 40) {
+                    feedrate = 40;
                 }
                 break;
             default:
@@ -106,12 +124,34 @@ public:
 
         reDisplay();
     }
+
     void onEntry(void* arg) override {
+        if (arg && strcmp((const char*)arg, "Confirmed") == 0) {
+            // send_line("$Macros/Run=1");
+
+            send_line("G21");
+            send_line("G91");
+            send_linef("M3 S%d", power_max / 100 * power_percent);
+            send_linef("G1 X10 F%d", feedrate);
+            send_line("G1 Y10");
+            send_line("G1 X-10");
+            send_line("G1 Y-10");
+            send_line("M5");
+            send_line("G90");
+        }
+
         // if (initPrefs()) {
         //     getPref("PowerMax", &power_max);
         //     getPref("TestDuration", &test_duration);
         //     getPref("PowerPercent", &power_percent);
         // }
+
+        switch (state) {
+            case Idle:
+                testStarted = false;
+                reDisplay();
+                break;
+        }
     }
 
     void reDisplay() {
@@ -123,21 +163,22 @@ public:
         const char* redLabel = "";
 
         if (state == Idle) {
-            int    x      = 40;
-            int    y      = 62;
-            int    width  = display_short_side() - (x * 2);
-            int    height = 25;
-            int    pitch  = 27;  // for spacing of buttons
+            int x      = 16;
+            int y      = 62;
+            int width  = display_short_side() - (x * 2);
+            int height = 28;
+
             Stripe button(x, y, width, height, TINY);
+
             button.draw("Power Max", intToCStr(power_max), selection == 0);
-            y = button.y();  // For LED
-            button.draw("Duration", intToCStr(test_duration), selection == 1);
-            button.draw("Power %", intToCStr(power_percent), selection == 2);
+            button.draw("Power, %", intToCStr(power_percent), selection == 1);
+            button.draw("Duration, ms", intToCStr(test_duration), selection == 2);
+            button.draw("Feedrate", intToCStr(feedrate), selection == 3);
 
-            //LED led(x - 20, y + height / 2, 10, button.gap());
-            //led.draw(myProbeSwitch);
+            LED led(x + width / 2, y + height * 5 - 5, 13, button.gap());
+            led.draw(testStarted, RED);
 
-            grnLabel = "*";
+            grnLabel = "Cut";
             redLabel = "Test";
         } else {
             if (state == Jog || state == Alarm) {  // there is no Probing state, so Cycle is a valid state on this
@@ -177,5 +218,12 @@ public:
         drawError();  // only if one just happened
         refreshDisplay();
     }
+
+    void confirm_cutting_test() {
+        ackBeep();
+        std::string confirmMsg("Test cutting?");
+        dbg_println(confirmMsg.c_str());
+        push_scene(&confirmScene, (void*)confirmMsg.c_str());
+    }
 };
-LaserScene laserScene;
+LaserTestScene laserTestScene;
