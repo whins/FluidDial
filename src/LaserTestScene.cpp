@@ -136,7 +136,7 @@ public:
             send_line("G1 Y10");
             send_line("G1 X-10");
             send_line("G1 Y-10");
-            send_line("M5");
+            send_line("M5 S0");
             send_line("G90");
         }
 
